@@ -22,14 +22,19 @@ namespace NP2COM
 
             SerialPortThread = new Thread(SerialPortRunner);
             NamedPipeThread = new Thread(NamedPipeRunner);
+            SerialPortBufferLock = new object();
+            SerialPortBuffer = new byte[65535];
+            NamedPipeBuffer = new byte[65535];
+            SerialPortBufferLength = 0;
+            NamePipeBufferLength = 0;
         }
 
         public void Start()
         {
             SerialPort.Open();
             NamedPipe.Connect();
-            SerialPortThread.Start();
-            NamedPipeThread.Start();
+            SerialPortThread.Start(this);
+            NamedPipeThread.Start(this);
         }
 
         public void Stop()
