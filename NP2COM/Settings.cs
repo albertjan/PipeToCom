@@ -1,9 +1,10 @@
-﻿using System.IO.Ports;
+using System.IO.Ports;
 
 namespace NP2COM
 {
     public class Settings
     {
+        //test 
         public string MachineName { get; set; }
         public string NamedPipe { get; set; }
         public string ComPort { get; set; }
