@@ -17,7 +17,6 @@ namespace NP2COM
 
         public Connection(Settings settings)
         {
-            Logger = LogManager.GetLogger(typeof(Connection));
             IsStarted = false;
             SerialPort = new SerialPort(settings.ComPort, settings.BaudRate, settings.Parity, settings.DataBits,
                                         settings.StopBits);
@@ -33,7 +32,7 @@ namespace NP2COM
             NamePipeBufferLength = 0;
         }
 
-        protected ILog Logger { get; set; }
+        private static readonly ILog Logger = LogManager.GetLogger(typeof (Connection));
 
         public void Start()
         {
@@ -76,20 +75,20 @@ namespace NP2COM
                     lock (thisConnection.SerialPortBufferLock)
                     {
                         //Array.Copy(buffer, cpBuf, numbytes);
-                        thisConnection.Logger.Debug("Read: " + numbytes + " from pipe. Have " + thisConnection.SerialPortBufferLength + " in buffer.");
+                        Logger.Debug("Read: " + numbytes + " from pipe. Have " + thisConnection.SerialPortBufferLength + " in buffer.");
                         //SerialPortBufferLength > 0
                         Buffer.BlockCopy(buffer, 0, thisConnection.SerialPortBuffer, thisConnection.SerialPortBufferLength, numbytes);
                         //en hier wordt SerialPortBufferLength 0 aarg!
                         thisConnection.SerialPortBufferLength += numbytes;
                         //en dan heb je hier niet de juiste aantal gelezen bytes
                         numbytes = 0;
-                        thisConnection.Logger.Debug("Read (NP): " + GetLogString(thisConnection.SerialPortBuffer, thisConnection.SerialPortBufferLength));
+                        Logger.Debug("Read (NP): " + GetLogString(thisConnection.SerialPortBuffer, thisConnection.SerialPortBufferLength));
                     }
                 }
 
                 if (thisConnection.NamePipeBufferLength > 0)
                 {
-                    thisConnection.Logger.Debug("Block 3");
+                    Logger.Debug("Block 3");
                     if (iar2 == null)
                     {
                         iar2 = thisConnection.NamedPipe.BeginWrite(thisConnection.NamedPipeBuffer, 0, thisConnection.NamePipeBufferLength, null, null);
@@ -102,7 +101,7 @@ namespace NP2COM
                 {
                     thisConnection.NamedPipe.EndWrite(iar2);
                     iar2 = null;
-                    thisConnection.Logger.Debug("Wrote (NP):" + GetLogString(thisConnection.NamedPipeBuffer, wroteBufLen));
+                    Logger.Debug("Wrote (NP):" + GetLogString(thisConnection.NamedPipeBuffer, wroteBufLen));
                     thisConnection.NamedPipe.Flush();
                 }
                 
@@ -138,7 +137,7 @@ namespace NP2COM
                 {
                     Array.Copy(buffer, thisConnection.NamedPipeBuffer, numbytes);
                     thisConnection.NamePipeBufferLength = numbytes;
-                    thisConnection.Logger.Debug("Read (CP): " + GetLogString(thisConnection.NamedPipeBuffer, thisConnection.NamePipeBufferLength));
+                    Logger.Debug("Read (CP): " + GetLogString(thisConnection.NamedPipeBuffer, thisConnection.NamePipeBufferLength));
                     numbytes = 0;
                 }
 
@@ -147,7 +146,7 @@ namespace NP2COM
                     lock (thisConnection.SerialPortBufferLock)
                     {
                         thisConnection.SerialPort.Write(thisConnection.SerialPortBuffer, 0, thisConnection.SerialPortBufferLength);
-                        thisConnection.Logger.Debug("Wrote (CP): " +
+                        Logger.Debug("Wrote (CP): " +
                                           GetLogString(thisConnection.SerialPortBuffer, thisConnection.SerialPortBufferLength));
                         thisConnection.SerialPortBufferLength = 0;    
                     }
