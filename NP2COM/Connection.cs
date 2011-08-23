@@ -17,7 +17,7 @@ namespace NP2COM
 
         public Connection(Settings settings)
         {
-            Logger = settings.Logger;
+            Logger = LogManager.GetLogger(typeof(Connection));
             IsStarted = false;
             SerialPort = new SerialPort(settings.ComPort, settings.BaudRate, settings.Parity, settings.DataBits,
                                         settings.StopBits);

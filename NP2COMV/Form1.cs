@@ -57,7 +57,6 @@ namespace NP2COMV
                 Enum.TryParse((string) stopBitsComboBox.SelectedItem, out stopbits);
                 Connection = new Connection(new Settings
                                                 {
-                                                    Logger = LogManager.GetLogger(typeof(Connection)),
                                                     BaudRate = int.Parse((string) baudRateComboBox.SelectedItem),
                                                     ComPort = (string) serialPortComboBox.SelectedItem,
                                                     Parity = parity,
@@ -72,5 +71,34 @@ namespace NP2COMV
         }
 
         protected Connection Connection { get; set; }
+
+        private void button2_Click(object sender, EventArgs e)
+        {
+            var sfd = new SaveFileDialog
+                          {
+                              Filter = "NP2COM (*.n2c)|*.n2c",
+                              AddExtension = true,
+                              DefaultExt = "n2c",
+                          };
+            if (sfd.ShowDialog() == DialogResult.OK)
+            {
+                var namedPipe = Regex.Match((string) namedPipeComboBox.SelectedItem,
+                                            @"\\\\(?<machine>[^\\]+)\\pipe\\(?<pipe>\w+)");
+                Parity parity;
+                StopBits stopbits;
+                Enum.TryParse((string) parityComboBox.SelectedItem, out parity);
+                Enum.TryParse((string) stopBitsComboBox.SelectedItem, out stopbits);
+                new Settings()
+                    {
+                        BaudRate = int.Parse((string) baudRateComboBox.SelectedItem),
+                        ComPort = (string) serialPortComboBox.SelectedItem,
+                        Parity = parity,
+                        StopBits = stopbits,
+                        DataBits = int.Parse((string) dataBitsComboBox.SelectedItem),
+                        MachineName = namedPipe.Groups["machine"].Value,
+                        NamedPipe = namedPipe.Groups["pipe"].Value,
+                    }.Save(sfd.FileName);
+            }
+        }
     }
 }
