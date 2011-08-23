@@ -3,6 +3,8 @@ using System.IO.Pipes;
 using System.IO.Ports;
 using System.Text;
 using System.Threading;
+using log4net;
+using log4net.Repository.Hierarchy;
 
 namespace NP2COM
 {
@@ -15,6 +17,8 @@ namespace NP2COM
 
         public Connection(Settings settings)
         {
+            Logger = settings.Logger;
+            IsStarted = false;
             SerialPort = new SerialPort(settings.ComPort, settings.BaudRate, settings.Parity, settings.DataBits,
                                         settings.StopBits);
             NamedPipe = new NamedPipeClientStream(settings.MachineName, settings.NamedPipe, PipeDirection.InOut,
@@ -29,20 +33,26 @@ namespace NP2COM
             NamePipeBufferLength = 0;
         }
 
+        protected ILog Logger { get; set; }
+
         public void Start()
         {
             SerialPort.Open();
             NamedPipe.Connect();
             SerialPortThread.Start(this);
             NamedPipeThread.Start(this);
+            IsStarted = true;
         }
 
+        public bool IsStarted { get; set; }
+        
         public void Stop()
         {
             SerialPortThread.Abort();
             NamedPipeThread.Abort();
             NamedPipe.Close();
             SerialPort.Close();
+            IsStarted = false;
         }
 
         static void NamedPipeRunner(object connection)
@@ -66,20 +76,20 @@ namespace NP2COM
                     lock (thisConnection.SerialPortBufferLock)
                     {
                         //Array.Copy(buffer, cpBuf, numbytes);
-                        Console.WriteLine("Read: " + numbytes + " from pipe. Have " + thisConnection.SerialPortBufferLength + " in buffer.");
+                        thisConnection.Logger.Debug("Read: " + numbytes + " from pipe. Have " + thisConnection.SerialPortBufferLength + " in buffer.");
                         //SerialPortBufferLength > 0
                         Buffer.BlockCopy(buffer, 0, thisConnection.SerialPortBuffer, thisConnection.SerialPortBufferLength, numbytes);
                         //en hier wordt SerialPortBufferLength 0 aarg!
                         thisConnection.SerialPortBufferLength += numbytes;
                         //en dan heb je hier niet de juiste aantal gelezen bytes
                         numbytes = 0;
-                        Console.WriteLine("Read (NP): " + GetLogString(thisConnection.SerialPortBuffer, thisConnection.SerialPortBufferLength));
+                        thisConnection.Logger.Debug("Read (NP): " + GetLogString(thisConnection.SerialPortBuffer, thisConnection.SerialPortBufferLength));
                     }
                 }
 
                 if (thisConnection.NamePipeBufferLength > 0)
                 {
-                    Console.WriteLine("Block 3");
+                    thisConnection.Logger.Debug("Block 3");
                     if (iar2 == null)
                     {
                         iar2 = thisConnection.NamedPipe.BeginWrite(thisConnection.NamedPipeBuffer, 0, thisConnection.NamePipeBufferLength, null, null);
@@ -92,7 +102,7 @@ namespace NP2COM
                 {
                     thisConnection.NamedPipe.EndWrite(iar2);
                     iar2 = null;
-                    Console.WriteLine("Wrote (NP):" + GetLogString(thisConnection.NamedPipeBuffer, wroteBufLen));
+                    thisConnection.Logger.Debug("Wrote (NP):" + GetLogString(thisConnection.NamedPipeBuffer, wroteBufLen));
                     thisConnection.NamedPipe.Flush();
                 }
                 
@@ -128,7 +138,7 @@ namespace NP2COM
                 {
                     Array.Copy(buffer, thisConnection.NamedPipeBuffer, numbytes);
                     thisConnection.NamePipeBufferLength = numbytes;
-                    Console.WriteLine("Read (CP): " + GetLogString(thisConnection.NamedPipeBuffer, thisConnection.NamePipeBufferLength));
+                    thisConnection.Logger.Debug("Read (CP): " + GetLogString(thisConnection.NamedPipeBuffer, thisConnection.NamePipeBufferLength));
                     numbytes = 0;
                 }
 
@@ -137,7 +147,7 @@ namespace NP2COM
                     lock (thisConnection.SerialPortBufferLock)
                     {
                         thisConnection.SerialPort.Write(thisConnection.SerialPortBuffer, 0, thisConnection.SerialPortBufferLength);
-                        Console.WriteLine("Wrote (CP): " +
+                        thisConnection.Logger.Debug("Wrote (CP): " +
                                           GetLogString(thisConnection.SerialPortBuffer, thisConnection.SerialPortBufferLength));
                         thisConnection.SerialPortBufferLength = 0;    
                     }
