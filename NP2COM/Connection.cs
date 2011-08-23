@@ -17,14 +17,8 @@ namespace NP2COM
 
         public Connection(Settings settings)
         {
+            CurrentSettings = settings;
             IsStarted = false;
-            SerialPort = new SerialPort(settings.ComPort, settings.BaudRate, settings.Parity, settings.DataBits,
-                                        settings.StopBits);
-            NamedPipe = new NamedPipeClientStream(settings.MachineName, settings.NamedPipe, PipeDirection.InOut,
-                                                  PipeOptions.Asynchronous);
-
-            SerialPortThread = new Thread(SerialPortRunner);
-            NamedPipeThread = new Thread(NamedPipeRunner);
             SerialPortBufferLock = new object();
             SerialPortBuffer = new byte[65535];
             NamedPipeBuffer = new byte[65535];
@@ -36,6 +30,12 @@ namespace NP2COM
 
         public void Start()
         {
+            SerialPort = new SerialPort (CurrentSettings.ComPort, CurrentSettings.BaudRate, CurrentSettings.Parity, CurrentSettings.DataBits,
+                                     CurrentSettings.StopBits);
+            NamedPipe = new NamedPipeClientStream (CurrentSettings.MachineName, CurrentSettings.NamedPipe, PipeDirection.InOut,
+                                                  PipeOptions.Asynchronous);
+            SerialPortThread = new Thread (SerialPortRunner);
+            NamedPipeThread = new Thread (NamedPipeRunner);
             SerialPort.Open();
             NamedPipe.Connect();
             SerialPortThread.Start(this);
@@ -43,7 +43,7 @@ namespace NP2COM
             IsStarted = true;
         }
 
-        public bool IsStarted { get; set; }
+        public bool IsStarted { get; private set; }
         
         public void Stop()
         {
@@ -171,5 +171,7 @@ namespace NP2COM
         protected Thread SerialPortThread { get; set; }
 
         protected Thread NamedPipeThread { get; set; }
+
+        protected Settings CurrentSettings { get; private set; }
     }
 }
