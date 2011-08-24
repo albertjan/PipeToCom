@@ -36,6 +36,10 @@ namespace NP2COMV
             parityComboBox.SelectedIndex = 0;
             dataBitsComboBox.SelectedIndex = 3;
             stopBitsComboBox.SelectedIndex = 1;
+
+            var rtbAppender = new RichTextBoxAppender { RichTextBox = richTextBox1 };
+            log4net.Config.BasicConfigurator.Configure(rtbAppender);
+            rtbAppender.Layout = new PatternLayout("%-5p %d{HH:mm:ss,fff} %-22.22c{1} %-18.18M - %m%n");
         }
 
         private void button1_Click (object sender, EventArgs e)
@@ -47,9 +51,6 @@ namespace NP2COMV
             }
             else
             {
-                var rtbAppender = new RichTextBoxAppender {RichTextBox = richTextBox1};
-                log4net.Config.BasicConfigurator.Configure(rtbAppender);
-                rtbAppender.Layout = new PatternLayout("%-5p %d{HH:mm:ss,fff} %-22.22c{1} %-18.18M - %m%n");
                 var namedPipe = Regex.Match((string) namedPipeComboBox.SelectedItem, @"\\\\(?<machine>[^\\]+)\\pipe\\(?<pipe>\w+)");
                 Parity parity;
                 StopBits stopbits;
