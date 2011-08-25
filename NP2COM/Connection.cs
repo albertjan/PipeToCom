@@ -19,23 +19,12 @@ namespace NP2COM
 
         public Connection(Settings settings)
         {
+            CurrentSettings = settings;
             IsStarted = false;
-            SerialPort = new SerialPort(settings.ComPort, settings.BaudRate, settings.Parity, settings.DataBits,
-                                        settings.StopBits);
-
-            //SerialPort.Handshake = Handshake.XOnXOff;
-            SerialPort.RtsEnable = true;
-            SerialPort.DtrEnable = true;
-            SerialPort.Encoding = Encoding.UTF8;
-            NamedPipe = new NamedPipeClientStream(settings.MachineName, settings.NamedPipe, PipeDirection.InOut,
-                                                  PipeOptions.Asynchronous | PipeOptions.WriteThrough);
 
             
 
             BinaryFile = new BinaryWriter(File.Open("test",FileMode.OpenOrCreate));
-
-            SerialPortThread = new Thread(SerialPortRunner);
-            NamedPipeThread = new Thread(NamedPipeRunner);
             SerialPortBufferLock = new object();
             NamedPipeBufferLock = new object();
             SerialPortBuffer = new byte[65535];
@@ -52,6 +41,16 @@ namespace NP2COM
 
         public void Start()
         {
+            SerialPort = new SerialPort (CurrentSettings.ComPort, CurrentSettings.BaudRate, CurrentSettings.Parity, CurrentSettings.DataBits,
+                                     CurrentSettings.StopBits);
+            SerialPort.RtsEnable = true;
+            SerialPort.DtrEnable = true;
+            SerialPort.Encoding = Encoding.UTF8;
+            NamedPipe = new NamedPipeClientStream(settings.MachineName, settings.NamedPipe, PipeDirection.InOut,
+                                                  PipeOptions.Asynchronous | PipeOptions.WriteThrough);
+
+            SerialPortThread = new Thread (SerialPortRunner);
+            NamedPipeThread = new Thread (NamedPipeRunner);
             SerialPort.Open();
             NamedPipe.Connect();
             NamedPipe.ReadMode = PipeTransmissionMode.Byte;
@@ -60,7 +59,7 @@ namespace NP2COM
             IsStarted = true;
         }
 
-        public bool IsStarted { get; set; }
+        public bool IsStarted { get; private set; }
         
         public void Stop()
         {
@@ -222,5 +221,7 @@ namespace NP2COM
         protected Thread SerialPortThread { get; set; }
 
         protected Thread NamedPipeThread { get; set; }
+
+        protected Settings CurrentSettings { get; private set; }
     }
 }
