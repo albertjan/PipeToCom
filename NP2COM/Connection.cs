@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.IO;
 using System.IO.Pipes;
 using System.IO.Ports;
@@ -21,16 +22,13 @@ namespace NP2COM
         {
             CurrentSettings = settings;
             IsStarted = false;
-
-            
-
-            BinaryFile = new BinaryWriter(File.Open("test",FileMode.OpenOrCreate));
             SerialPortBufferLock = new object();
             NamedPipeBufferLock = new object();
             SerialPortBuffer = new byte[65535];
             NamedPipeBuffer = new byte[65535];
             SerialPortBufferLength = 0;
             NamedPipeBufferLength = 0;
+            
         }
 
         protected BinaryWriter BinaryFile { get; set; }
@@ -46,17 +44,41 @@ namespace NP2COM
             SerialPort.RtsEnable = true;
             SerialPort.DtrEnable = true;
             SerialPort.Encoding = Encoding.UTF8;
-            NamedPipe = new NamedPipeClientStream(settings.MachineName, settings.NamedPipe, PipeDirection.InOut,
-                                                  PipeOptions.Asynchronous | PipeOptions.WriteThrough);
+            NamedPipe = new NamedPipeClientStream(CurrentSettings.MachineName, CurrentSettings.NamedPipe, PipeDirection.InOut,
+                                                  PipeOptions.Asynchronous);
 
             SerialPortThread = new Thread (SerialPortRunner);
             NamedPipeThread = new Thread (NamedPipeRunner);
+            NamedPipeCopyThread = new Thread(NamedPipeCopier);
+
+            NamedPipeBufferstream = new BufferedStream(NamedPipe);
+
             SerialPort.Open();
             NamedPipe.Connect();
             NamedPipe.ReadMode = PipeTransmissionMode.Byte;
+            
+            //NamedPipe.
             SerialPortThread.Start(this);
             NamedPipeThread.Start(this);
+            NamedPipeCopyThread.Start(this);
             IsStarted = true;
+        }
+
+        static void NamedPipeCopier(object connection)
+        {
+            var thisConnection = (Connection)connection;
+            if (thisConnection == null) throw new ArgumentException("connection must be of Type Connection!");
+            while (true)
+            {
+                var read = (byte) thisConnection.NamedPipeBufferstream.ReadByte();
+                if (read != -1)
+                {
+                    //thisConnection.NamedPipe.WaitForPipeDrain();
+                    thisConnection.SerialPortBuffer[thisConnection.SerialPortBufferLength] = read;
+                    thisConnection.SerialPortBufferLength++;
+                }
+                if (read == -1) Thread.Sleep(1);
+            }
         }
 
         public bool IsStarted { get; private set; }
@@ -81,43 +103,43 @@ namespace NP2COM
             IAsyncResult iar = null, iar2 = null;
             while (true)
             {
-                if (iar != null)
-                    if (iar.IsCompleted)
-                    {
-                        numbytes = thisConnection.NamedPipe.EndRead(iar);
-                        iar = null;
-                    }
-                
-                if (numbytes > 0)
-                {
-                    lock (thisConnection.SerialPortBufferLock)
-                    {
-                        //Array.Copy(buffer, cpBuf, numbytes);
-                        if (thisConnection.SerialPortBufferLength > 0) Logger.Debug("Read: " + numbytes + " from pipe. Have " + thisConnection.SerialPortBufferLength + " in buffer.");
-                        //SerialPortBufferLength > 0
-                        //if (buffer[0] == 0x7E || pppbuflen > 0)
-                        //{
-                        //    Buffer.BlockCopy(buffer, 0, pppbuffer, pppbuflen, numbytes);
-                        //    if (pppbuffer.Count(b => b == 0x7E) == 2)
-                        //    {
-                        //        if (pppbuffer[pppbuflen] == 0x7E)
-                        //            Array.Copy(pppbuffer, thisConnection.SerialPortBuffer, pppbuflen);
+                //if (iar != null)
+                //    if (iar.IsCompleted)
+                //    {
+                //        numbytes = thisConnection.NamedPipe.EndRead(iar);
+                //        iar = null;
+                //    }
 
-                        //        thisConnection.SerialPortBufferLength = pppbuflen;
-                        //        pppbuflen = 0;
-                        //    }
-                        //}
-                        //else
-                        Buffer.BlockCopy(buffer, 0, thisConnection.SerialPortBuffer, thisConnection.SerialPortBufferLength, numbytes);
-                        //en hier wordt SerialPortBufferLength 0 aarg!
-                        thisConnection.SerialPortBufferLength += numbytes;
-                        //en dan heb je hier niet de juiste aantal gelezen bytes
-                        numbytes = 0;
-                        Logger.Debug("Read (NP): " + string.Concat(thisConnection.SerialPortBuffer.Take(thisConnection.SerialPortBufferLength).Select(b=>b.ToString("x2")).ToArray()));// .ToString("x2"))));//GetLogString(thisConnection.SerialPortBuffer, thisConnection.SerialPortBufferLength));
-                    }
-                }
+                //if (numbytes > 0)
+                //{
+                //    lock (thisConnection.SerialPortBufferLock)
+                //    {
+                //        //Array.Copy(buffer, cpBuf, numbytes);
+                //        if (thisConnection.SerialPortBufferLength > 0) Logger.Debug("Read: " + numbytes + " from pipe. Have " + thisConnection.SerialPortBufferLength + " in buffer.");
+                //        //SerialPortBufferLength > 0
+                //        //if (buffer[0] == 0x7E || pppbuflen > 0)
+                //        //{
+                //        //    Buffer.BlockCopy(buffer, 0, pppbuffer, pppbuflen, numbytes);
+                //        //    if (pppbuffer.Count(b => b == 0x7E) == 2)
+                //        //    {
+                //        //        if (pppbuffer[pppbuflen] == 0x7E)
+                //        //            Array.Copy(pppbuffer, thisConnection.SerialPortBuffer, pppbuflen);
 
-                if (thisConnection.NamedPipeBufferLength > 1)// && iar == null)
+                //        //        thisConnection.SerialPortBufferLength = pppbuflen;
+                //        //        pppbuflen = 0;
+                //        //    }
+                //        //}
+                //        //else
+                //        Buffer.BlockCopy(buffer, 0, thisConnection.SerialPortBuffer, thisConnection.SerialPortBufferLength, numbytes);
+                //        //en hier wordt SerialPortBufferLength 0 aarg!
+                //        thisConnection.SerialPortBufferLength += numbytes;
+                //        //en dan heb je hier niet de juiste aantal gelezen bytes
+                //        numbytes = 0;
+                //        Logger.Debug("Read (NP): " + string.Concat(thisConnection.SerialPortBuffer.Take(thisConnection.SerialPortBufferLength).Select(b => b.ToString("x2")).ToArray()));// .ToString("x2"))));//GetLogString(thisConnection.SerialPortBuffer, thisConnection.SerialPortBufferLength));
+                //    }
+                //}
+
+                if (thisConnection.NamedPipeBufferLength > 0)// && iar == null)
                 {
                     Logger.Debug("Block 3");
                     lock (thisConnection.NamedPipeBufferLock)
@@ -136,12 +158,12 @@ namespace NP2COM
                 //    iar2 = null;
                 //    thisConnection.NamedPipe.Flush();
                 //}
-                
 
-                if (iar == null)
-                {
-                    iar = thisConnection.NamedPipe.BeginRead(buffer, 0, 65536, null, null);
-                }
+
+                //if (iar == null)
+                //{
+                //    iar = thisConnection.NamedPipe.BeginRead(buffer, 0, 65536, null, null);
+                //}
                 Thread.Sleep(5);
             }
         }
@@ -184,21 +206,20 @@ namespace NP2COM
                     }
                 }
 
-                if (thisConnection.SerialPortBufferLength > 1)
+                if (thisConnection.SerialPortBufferLength > 0)
                 {
                     //var mod = (thisConnection.SerialPortBuffer.Count(b => b == 0x7E)%2);
                     //if (write != (mod==0)) Logger.Info("Count(~)%2 = " + mod);
                     //write = mod == 0;
-                    
+
                     //if (write)
                     lock (thisConnection.SerialPortBufferLock)
                     {
-                        thisConnection.BinaryFile.Write(thisConnection.SerialPortBuffer, 0 , thisConnection.SerialPortBufferLength);
                         thisConnection.SerialPort.BaseStream.Write(thisConnection.SerialPortBuffer, 0, thisConnection.SerialPortBufferLength);
                         Logger.Debug("Wrote (CP): " +
                                             GetLogString(thisConnection.SerialPortBuffer, thisConnection.SerialPortBufferLength));
                         thisConnection.SerialPortBuffer = new byte[65535];
-                        thisConnection.SerialPortBufferLength = 0;    
+                        thisConnection.SerialPortBufferLength = 0;
                     }
                 }
                 
@@ -222,6 +243,10 @@ namespace NP2COM
 
         protected Thread NamedPipeThread { get; set; }
 
+        protected Thread NamedPipeCopyThread { get; set; }
+
         protected Settings CurrentSettings { get; private set; }
+
+        protected BufferedStream NamedPipeBufferstream { get; set; }
     }
 }
