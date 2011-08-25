@@ -1,13 +1,10 @@
 ﻿using System;
-using System.Diagnostics;
 using System.IO;
 using System.IO.Pipes;
 using System.IO.Ports;
 using System.Text;
 using System.Threading;
-using System.Linq;
 using log4net;
-using log4net.Repository.Hierarchy;
 
 namespace NP2COM
 {
@@ -40,10 +37,12 @@ namespace NP2COM
         public void Start()
         {
             SerialPort = new SerialPort (CurrentSettings.ComPort, CurrentSettings.BaudRate, CurrentSettings.Parity, CurrentSettings.DataBits,
-                                     CurrentSettings.StopBits);
-            SerialPort.RtsEnable = true;
-            SerialPort.DtrEnable = true;
-            SerialPort.Encoding = Encoding.UTF8;
+                                     CurrentSettings.StopBits)
+                             {
+                                 RtsEnable = true,
+                                 DtrEnable = true,
+                                 Encoding = Encoding.UTF8
+                             };
             NamedPipe = new NamedPipeClientStream(CurrentSettings.MachineName, CurrentSettings.NamedPipe, PipeDirection.InOut,
                                                   PipeOptions.Asynchronous);
 
@@ -56,8 +55,6 @@ namespace NP2COM
             SerialPort.Open();
             NamedPipe.Connect();
             NamedPipe.ReadMode = PipeTransmissionMode.Byte;
-            
-            BinaryFile = new BinaryWriter(File.OpenWrite(@"E:\inetpub\test3.txt"));
 
             //NamedPipe.
             SerialPortThread.Start(this);
@@ -73,11 +70,12 @@ namespace NP2COM
             while (true)
             {
                 var read = thisConnection.NamedPipeBufferstream.ReadByte();
-                Logger.Debug("Read " + (read > 0 ? ((byte)read).ToString("x2") : read.ToString()));
+
+                //Logger.Debug("Read " + (read > 0 ? ((byte)read).ToString("x2") : read.ToString()));
                 if (read == -1) break;
                 
-                thisConnection.BinaryFile.Write((byte)read);
-                thisConnection.BinaryFile.Flush();
+                //thisConnection.BinaryFile.Write((byte)read);
+                //thisConnection.BinaryFile.Flush();
                 lock (thisConnection.SerialPortBufferLock)
                 { 
                     thisConnection.SerialPortBuffer[thisConnection.SerialPortBufferLength] = (byte) read;
@@ -110,12 +108,12 @@ namespace NP2COM
                     {
                         thisConnection.NamedPipe.Write(thisConnection.NamedPipeBuffer, 0,
                                                        thisConnection.NamedPipeBufferLength);
-                        //Logger.Debug("Wrote (NP):" +
-                        //             GetLogString(thisConnection.NamedPipeBuffer, thisConnection.NamedPipeBufferLength));
+                        Logger.Debug("Wrote (NP):" +
+                                     GetLogString(thisConnection.NamedPipeBuffer, thisConnection.NamedPipeBufferLength));
                         thisConnection.NamedPipeBufferLength = 0;
                     }
                 }
-                //Thread.Sleep(1);
+                Thread.Sleep(5);
             }
         }
 
@@ -147,8 +145,8 @@ namespace NP2COM
                         {
                             Buffer.BlockCopy(buffer, 0, thisConnection.NamedPipeBuffer, thisConnection.NamedPipeBufferLength, numbytes);
                             thisConnection.NamedPipeBufferLength += numbytes;
-                            //Logger.Debug("Read (CP): " +
-                            //             GetLogString(thisConnection.NamedPipeBuffer, thisConnection.NamedPipeBufferLength));
+                            Logger.Debug("Read (CP): " +
+                                        GetLogString(thisConnection.NamedPipeBuffer, thisConnection.NamedPipeBufferLength));
                             numbytes = 0;
                         }
                     }
@@ -159,14 +157,14 @@ namespace NP2COM
                     lock (thisConnection.SerialPortBufferLock)
                     {
                         thisConnection.SerialPort.BaseStream.Write(thisConnection.SerialPortBuffer, 0, thisConnection.SerialPortBufferLength);
-                        //Logger.Debug("Wrote (CP): " +
-                        //                    GetLogString(thisConnection.SerialPortBuffer, thisConnection.SerialPortBufferLength));
+                        Logger.Debug("Wrote (CP): " +
+                                            GetLogString(thisConnection.SerialPortBuffer, thisConnection.SerialPortBufferLength));
                         //thisConnection.SerialPortBuffer = new byte[65535];
                         thisConnection.SerialPortBufferLength = 0;
                     }
                 }
                 
-                //Thread.Sleep(5);
+                Thread.Sleep(5);
             }
         }
 
