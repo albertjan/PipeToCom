@@ -13,6 +13,7 @@ using System.Windows.Forms;
 using log4net;
 using log4net.Layout;
 using NP2COM;
+using NP2COMS;
 
 
 namespace NP2COMV
@@ -100,6 +101,13 @@ namespace NP2COMV
                         NamedPipe = namedPipe.Groups["pipe"].Value,
                     }.Save(sfd.FileName);
             }
+        }
+
+        private void button3_Click(object sender, EventArgs e)
+        {
+            MessageBox.Show("ConfigurationFiles (.n2c) files have to be in the current diectory: (" + Path.GetFullPath(".") + ")");
+            var comService = new NP2COMService();
+            comService.startorstop(true);
         }
     }
 }

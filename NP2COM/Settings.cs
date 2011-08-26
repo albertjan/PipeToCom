@@ -22,5 +22,15 @@ namespace NP2COM
             using (var fs = File.Open(fileName,FileMode.CreateNew))
                 new XmlSerializer(typeof(Settings)).Serialize(fs, this);
         }
+
+        public static Settings Load(string fileName)
+        {
+            if (File.Exists(fileName))
+            {
+                using (var fs =File.OpenRead(fileName))
+                    return (Settings)new XmlSerializer(typeof (Settings)).Deserialize(fs);
+            }
+            throw new FileNotFoundException("Can't find config file", fileName);
+        }
     }
 }

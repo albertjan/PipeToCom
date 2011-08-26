@@ -5,6 +5,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NP2COM", "NP2COM\NP2COM.csp
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NP2COMV", "NP2COMV\NP2COMV.csproj", "{893F0D57-B7E9-433B-B588-ACB960FE3812}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NP2COMS", "NP2COMS\NP2COMS.csproj", "{144D7239-3D38-4049-8AFC-7635779C6E17}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x86 = Debug|x86
@@ -19,6 +21,10 @@ Global
 		{893F0D57-B7E9-433B-B588-ACB960FE3812}.Debug|x86.Build.0 = Debug|x86
 		{893F0D57-B7E9-433B-B588-ACB960FE3812}.Release|x86.ActiveCfg = Release|x86
 		{893F0D57-B7E9-433B-B588-ACB960FE3812}.Release|x86.Build.0 = Release|x86
+		{144D7239-3D38-4049-8AFC-7635779C6E17}.Debug|x86.ActiveCfg = Debug|x86
+		{144D7239-3D38-4049-8AFC-7635779C6E17}.Debug|x86.Build.0 = Debug|x86
+		{144D7239-3D38-4049-8AFC-7635779C6E17}.Release|x86.ActiveCfg = Release|x86
+		{144D7239-3D38-4049-8AFC-7635779C6E17}.Release|x86.Build.0 = Release|x86
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
