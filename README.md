@@ -39,5 +39,3 @@ and creates as many named-pipe serialport connections as you want.
 Or atleast it will do in the future sofar it's not yet working :)
 
 Enjoy,
-
-Oh yeah and don't sell my ideas! :P.
