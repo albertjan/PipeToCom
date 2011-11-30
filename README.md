@@ -14,7 +14,7 @@ want to enjoy the full speed of the connection.
 
 This makes it possible in theory to virtualize your fax server.
 
-There's also a binary release (see download section)
+There's also a binary release here: https://github.com/downloads/albertjan/PipeToCom/NP2COM.zip
 
 NP2COMV is a winforms app to test and make your settings. It
 allows you to save configuration files that look like this:
