@@ -36,6 +36,6 @@ Which you can later on use to configure your service:
 
 NP2COMS is a windows service that reads n config files like above
 and creates as many named-pipe serialport connections as you want.
-Or atleast it will do in the future sofar it's not yet working :)
+
 
 Enjoy,
