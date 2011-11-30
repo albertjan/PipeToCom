@@ -86,7 +86,7 @@ namespace NP2COM
                 if (read == -1) break;
                 lock (thisConnection.SerialPortBufferLock)
                 {
-                    Logger.Debug("Read byte from NP");
+                    //Logger.Debug("Read byte from NP");
                     thisConnection.SerialPortBuffer[thisConnection.SerialPortBufferLength] = (byte)read;
                     thisConnection.SerialPortBufferLength++;
                 }
