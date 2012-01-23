@@ -156,7 +156,7 @@ namespace NP2COM
                     }
                 }
                 
-                Thread.Sleep(5);
+                Thread.Sleep(1);
             }
         }
 
