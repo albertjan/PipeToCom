@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.IO.Pipes;
 using System.IO.Ports;
@@ -110,7 +110,7 @@ namespace NP2COM
                         thisConnection.NamedPipeBufferLength = 0;
                     }
                 }
-                Thread.Sleep(5);
+                Thread.Sleep(1);
             }
         }
 
