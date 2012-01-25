@@ -16,6 +16,8 @@ namespace NP2COM
         public Parity Parity { get; set; }
         public int DataBits { get; set; }
 
+        public char? MessageTerminationCharacter { get; set;}
+
         public void Save(string fileName)
         {
             if (File.Exists(fileName)) File.Delete(fileName);

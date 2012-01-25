@@ -32,7 +32,7 @@ namespace NP2COM
             SerialPortBuffer = new byte[65535];
             NamedPipeBuffer = new byte[65535];
             SerialPortBufferLength = 0;
-            NamedPipeBufferLength = 0;
+            NamedPipeBufferLength = 0;            
         }
         
         public void Start()
@@ -80,15 +80,60 @@ namespace NP2COM
         {
             var thisConnection = (Connection)connection;
             if (thisConnection == null) throw new ArgumentException("connection must be of Type Connection!");
-            while (true)
+            
+            
+            var useTermChar = thisConnection.CurrentSettings.MessageTerminationCharacter != null;
+                        
+            char termChar
+            byte[] localBuffer;
+            int localBufferSize = 0;
+            
+            if (useTermChar)
             {
-                var read = thisConnection.NamedPipeBufferstream.ReadByte();
-                if (read == -1) break;
-                lock (thisConnection.SerialPortBufferLock)
+                termChar = CurrentSettings.MessageTerminationCharacter.Value;
+                //size should probably come from settings. == maxMessageSize
+                localBuffer = new byte[73];
+                while (true)
                 {
-                    //Logger.Debug("Read byte from NP");
-                    thisConnection.SerialPortBuffer[thisConnection.SerialPortBufferLength] = (byte)read;
-                    thisConnection.SerialPortBufferLength++;
+                    var read = thisConnection.NamedPipeBufferstream.ReadByte();
+                    //if this is true the namedpipe connection has failed.
+                    if (read == -1) break;
+                    if ((char)read != termChar)
+                    {
+                        //add byte to the localbuffer if it's not the termCharacter.
+                        localBuffer[localBufferSize] = read;
+                        localBufferSize++;
+                    }
+                    else
+                    {
+                        //add termchar to the buffer
+                        localBuffer[localBufferSize] = read;
+                        localBufferSize++;
+                        //locl the serialport buffer so this thread is the only one allowed to write to it.
+                        lock (thisConnection.SerialPortBufferLock)
+                        {
+                            //copy the local buffer to the serialportbuffer
+                            Array.Copy (localBuffer, thisConnection.SerialPortBuffer, thisConnection.SerialPortBufferLength, localBufferSize);
+                            thisConnection.SerialPortBufferLength = thisConnection.SerialPortBufferLength + localBufferSize;
+                            //"empty" the localbuffer (start again at the beginning);
+                            localBufferSize = 0;                            
+                        }
+                    }
+                }
+            }
+            else 
+            {
+                while (true)
+                {
+                    var read = thisConnection.NamedPipeBufferstream.ReadByte();
+                    //if this is true the namedpipe connection has failed.
+                    if (read == -1) break;
+                    lock (thisConnection.SerialPortBufferLock)
+                    {
+                        //Logger.Debug("Read byte from NP");
+                        thisConnection.SerialPortBuffer[thisConnection.SerialPortBufferLength] = (byte)read;
+                        thisConnection.SerialPortBufferLength++;
+                    }
                 }
             }
         }
