@@ -29,6 +29,8 @@ allows you to save configuration files that look like this:
   <StopBits>One</StopBits>
   <Parity>None</Parity>
   <DataBits>8</DataBits>
+  <!--<MessageTerminationCharacter>;</MessageTerminationCharacter>-->
+  <!--<MaximumMessageSize>72</MaximumMessageSize>-->
 </Settings>
 ```
 
