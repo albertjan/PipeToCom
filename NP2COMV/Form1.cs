@@ -1,16 +1,8 @@
 using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
 using System.IO;
-using System.IO.Pipes;
 using System.IO.Ports;
-using System.Linq;
-using System.Text;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
-using log4net;
 using log4net.Layout;
 using NP2COM;
 using NP2COMS;
@@ -60,8 +52,8 @@ namespace NP2COMV
             }
             else
             {   
-                var namedPipeStr = String.IsNullOrEmpty(namedPipeComboBox.SelectedItem) ? namedPipeComboBox.Text : namedPipeComboBox.SelectedItem;
-                var namedPipe = Regex.Match((string) , @"\\\\(?<machine>[^\\]+)\\pipe\\(?<pipe>\w+)");
+                var namedPipeStr = namedPipeComboBox.SelectedItem ?? namedPipeComboBox.Text;
+                var namedPipe = Regex.Match ((string)namedPipeStr, @"\\\\(?<machine>[^\\]+)\\pipe\\(?<pipe>\w+)");
                                 
                 Parity parity;
                 StopBits stopbits;
@@ -94,7 +86,8 @@ namespace NP2COMV
                           };
             if (sfd.ShowDialog() == DialogResult.OK)
             {
-                var namedPipe = Regex.Match((string) namedPipeComboBox.SelectedItem,
+                var namedPipeStr = namedPipeComboBox.SelectedItem ?? namedPipeComboBox.Text;
+                var namedPipe = Regex.Match ((string)namedPipeStr,
                                             @"\\\\(?<machine>[^\\]+)\\pipe\\(?<pipe>\w+)");
                 Parity parity;
                 StopBits stopbits;
