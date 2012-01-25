@@ -60,8 +60,8 @@ namespace NP2COMV
             }
             else
             {   
-                var namedPipeStr = String.IsNullOrEmpty(namedPipeComboBox.SelectedItem) ? namedPipeComboBox.Text : namedPipeComboBox.SelectedItem;
-                var namedPipe = Regex.Match((string) , @"\\\\(?<machine>[^\\]+)\\pipe\\(?<pipe>\w+)");
+                var namedPipeStr = namedPipeComboBox.SelectedItem ?? namedPipeComboBox.Text;
+                var namedPipe = Regex.Match ((string)namedPipeStr, @"\\\\(?<machine>[^\\]+)\\pipe\\(?<pipe>\w+)");
                                 
                 Parity parity;
                 StopBits stopbits;

@@ -81,18 +81,15 @@ namespace NP2COM
             var thisConnection = (Connection)connection;
             if (thisConnection == null) throw new ArgumentException("connection must be of Type Connection!");
             
-            
             var useTermChar = thisConnection.CurrentSettings.MessageTerminationCharacter != null;
-                        
-            char termChar
-            byte[] localBuffer;
-            int localBufferSize = 0;
+
+            var localBufferSize = 0;
             
             if (useTermChar)
             {
-                termChar = CurrentSettings.MessageTerminationCharacter.Value;
+                var termChar = thisConnection.CurrentSettings.MessageTerminationCharacter.Value;
                 //size should probably come from settings. == maxMessageSize
-                localBuffer = new byte[73];
+                var localBuffer = new byte[73];
                 while (true)
                 {
                     var read = thisConnection.NamedPipeBufferstream.ReadByte();
@@ -101,19 +98,19 @@ namespace NP2COM
                     if ((char)read != termChar)
                     {
                         //add byte to the localbuffer if it's not the termCharacter.
-                        localBuffer[localBufferSize] = read;
+                        localBuffer[localBufferSize] = (byte)read;
                         localBufferSize++;
                     }
                     else
                     {
                         //add termchar to the buffer
-                        localBuffer[localBufferSize] = read;
+                        localBuffer[localBufferSize] = (byte)read;
                         localBufferSize++;
                         //locl the serialport buffer so this thread is the only one allowed to write to it.
                         lock (thisConnection.SerialPortBufferLock)
                         {
                             //copy the local buffer to the serialportbuffer
-                            Array.Copy (localBuffer, thisConnection.SerialPortBuffer, thisConnection.SerialPortBufferLength, localBufferSize);
+                            Array.Copy(localBuffer, 0, thisConnection.SerialPortBuffer, thisConnection.SerialPortBufferLength, localBufferSize);
                             thisConnection.SerialPortBufferLength = thisConnection.SerialPortBufferLength + localBufferSize;
                             //"empty" the localbuffer (start again at the beginning);
                             localBufferSize = 0;                            
