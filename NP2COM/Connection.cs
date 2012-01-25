@@ -155,7 +155,7 @@ namespace NP2COM
                         thisConnection.NamedPipeBufferLength = 0;
                     }
                 }
-                Thread.Sleep(1);
+                Thread.Sleep(5);
             }
         }
 
@@ -201,7 +201,7 @@ namespace NP2COM
                     }
                 }
                 
-                Thread.Sleep(1);
+                Thread.Sleep(5);
             }
         }
 
