@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -27,7 +27,15 @@ namespace NP2COMV
 
         private void Form1_Load (object sender, EventArgs e)
         {
-            namedPipeComboBox.Items.AddRange(Directory.GetFiles(@"\\.\pipe\"));
+            //this line breaks with vmware. I'm sure it's because vmware adds a weird namedpipe. :)
+            try
+            {
+                namedPipeComboBox.Items.AddRange(Directory.GetFiles(@"\\.\pipe\"));
+            }
+            catch
+            {
+                MessageBox.Show("Can't read namedpipe's");
+            }
             serialPortComboBox.Items.AddRange(SerialPort.GetPortNames());
             parityComboBox.Items.AddRange(Enum.GetNames(typeof(Parity)));
             stopBitsComboBox.Items.AddRange(Enum.GetNames(typeof(StopBits)));
@@ -51,8 +59,10 @@ namespace NP2COMV
                 Connection.Stop();
             }
             else
-            {
-                var namedPipe = Regex.Match((string) namedPipeComboBox.SelectedItem, @"\\\\(?<machine>[^\\]+)\\pipe\\(?<pipe>\w+)");
+            {   
+                var namedPipeStr = String.IsNullOrEmpty(namedPipeComboBox.SelectedItem) ? namedPipeComboBox.Text : namedPipeComboBox.SelectedItem;
+                var namedPipe = Regex.Match((string) , @"\\\\(?<machine>[^\\]+)\\pipe\\(?<pipe>\w+)");
+                                
                 Parity parity;
                 StopBits stopbits;
                 Enum.TryParse((string) parityComboBox.SelectedItem, out parity);
