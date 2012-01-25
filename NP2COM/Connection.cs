@@ -76,6 +76,28 @@ namespace NP2COM
 
         #region Static Thread functions
 
+        //make sure EVERY byte is read from the namedpipe to keep the UART buffer empty. and put into the local buffer.
+        private static void NamedpipeCopier(object connection)
+        {
+            var thisConnection = (Connection)connection;
+            if (thisConnection == null) throw new ArgumentException ("connection must be of Type Connection!");
+        }
+
+        //read from serialport, buffer, edit, write to namedpipe
+        private static void RxStreamCopier(object connection)
+        {
+            var thisConnection = (Connection)connection;
+            if (thisConnection == null) throw new ArgumentException ("connection must be of Type Connection!");
+        }
+
+        //readfrom the buffer (created by the namedpipe copier), edit, write
+        private static void TxStreamCopier (object connection)
+        {
+            var thisConnection = (Connection)connection;
+            if (thisConnection == null) throw new ArgumentException ("connection must be of Type Connection!");
+        }
+
+
         private static void NamedPipeCopier(object connection)
         {
             var thisConnection = (Connection)connection;
