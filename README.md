@@ -39,3 +39,6 @@ and creates as many named-pipe serialport connections as you want.
 
 
 Enjoy,
+
+
+Having problems start here: https://github.com/albertjan/PipeToCom/issues/10
