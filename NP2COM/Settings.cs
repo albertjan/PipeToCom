@@ -1,8 +1,6 @@
-using System;
 using System.IO;
 using System.IO.Ports;
 using System.Xml.Serialization;
-using log4net;
 
 namespace NP2COM
 {

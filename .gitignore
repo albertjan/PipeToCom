@@ -31,3 +31,7 @@ obj/
 [Rr]elease*/
 _ReSharper*/
 [Tt]est[Rr]esult*
+#NuGet
+packages/*
+!packages/repositories.config
+

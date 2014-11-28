@@ -1,4 +1,5 @@
 ﻿using System.ServiceProcess;
+using System.Threading;
 
 namespace NP2COMS
 {
@@ -7,14 +8,14 @@ namespace NP2COMS
         /// <summary>
         /// The main entry point for the application.
         /// </summary>
-        static void Main()
+        /// 
+        public static int Main(string[] args)
         {
-            ServiceBase[] ServicesToRun;
-            ServicesToRun = new ServiceBase[] 
-			{ 
-				new NP2COMService() 
-			};
-            ServiceBase.Run(ServicesToRun);
+            NP2COMService service = new NP2COMService();
+
+            ServiceBase.Run(new NP2COMService());
+
+            return 0;
         }
     }
 }

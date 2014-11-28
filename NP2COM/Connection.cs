@@ -8,8 +8,19 @@ using log4net;
 
 namespace NP2COM
 {
+    using System.Runtime.InteropServices;
+    using System.Threading.Tasks;
+
     public class Connection
     {
+        private SerialPort serialPort;
+
+        private NamedPipeClientStream namedPipe;
+
+        private Thread portForwarder;
+
+        private AutoResetEvent stopEvent;
+
         #region Logging
 
         private static readonly ILog Logger = LogManager.GetLogger(typeof(Connection));
@@ -25,50 +36,48 @@ namespace NP2COM
 
         public Connection(Settings settings)
         {
+            this.stopEvent = new AutoResetEvent(false);
+
             CurrentSettings = settings;
             IsStarted = false;
-            SerialPortBufferLock = new object();
-            NamedPipeBufferLock = new object();
-            SerialPortBuffer = new byte[65535];
-            NamedPipeBuffer = new byte[65535];
-            SerialPortBufferLength = 0;
-            NamedPipeBufferLength = 0;
         }
         
         public void Start()
         {
-            SerialPort = new SerialPort (CurrentSettings.ComPort, CurrentSettings.BaudRate, CurrentSettings.Parity, CurrentSettings.DataBits,
-                                     CurrentSettings.StopBits)
-                             {
-                                 RtsEnable = true,
-                                 DtrEnable = true,
-                                 Encoding = Encoding.UTF8
-                             };
-            NamedPipe = new NamedPipeClientStream(CurrentSettings.MachineName, CurrentSettings.NamedPipe, PipeDirection.InOut,
-                                                  PipeOptions.Asynchronous);
+            this.serialPort = 
+                new SerialPort(
+                    CurrentSettings.ComPort, 
+                    CurrentSettings.BaudRate, 
+                    CurrentSettings.Parity, 
+                    CurrentSettings.DataBits,
+                    CurrentSettings.StopBits)
+                    {
+                        RtsEnable = true,
+                        DtrEnable = true,
+                        Encoding = Encoding.UTF8
+                     };
 
-            SerialPortThread = new Thread (SerialPortRunner);
-            NamedPipeThread = new Thread (NamedPipeRunner);
-            NamedPipeCopyThread = new Thread(NamedPipeCopier);
+            this.namedPipe = 
+                new NamedPipeClientStream(
+                    CurrentSettings.MachineName, 
+                    CurrentSettings.NamedPipe, 
+                    PipeDirection.InOut,
+                    PipeOptions.Asynchronous);
 
-            NamedPipeBufferstream = new BufferedStream(NamedPipe);
+            this.portForwarder = new Thread(this.PortForwarder);          
+            portForwarder.Start();
 
-            SerialPort.Open();
-            NamedPipe.Connect();
-            NamedPipe.ReadMode = PipeTransmissionMode.Byte;
-
-            SerialPortThread.Start(this);
-            NamedPipeThread.Start(this);
-            NamedPipeCopyThread.Start(this);
             IsStarted = true;
         }
 
         public void Stop()
         {
-            SerialPortThread.Abort();
-            NamedPipeThread.Abort();
-            NamedPipe.Close();
-            SerialPort.Close();
+            // Signal the port forwarder thread to stop
+            this.stopEvent.Set();
+
+            // Wait for port forwarder thread to stop
+            this.portForwarder.Join();
+           
             IsStarted = false;
         }
 
@@ -76,88 +85,129 @@ namespace NP2COM
 
         #region Static Thread functions
 
-        private static void NamedPipeCopier(object connection)
+        private void PortForwarder()
         {
-            var thisConnection = (Connection)connection;
-            if (thisConnection == null) throw new ArgumentException("connection must be of Type Connection!");
-            while (true)
-            {
-                var read = thisConnection.NamedPipeBufferstream.ReadByte();
-                if (read == -1) break;
-                lock (thisConnection.SerialPortBufferLock)
-                {
-                    //Logger.Debug("Read byte from NP");
-                    thisConnection.SerialPortBuffer[thisConnection.SerialPortBufferLength] = (byte)read;
-                    thisConnection.SerialPortBufferLength++;
-                }
-            }
-        }
+            byte[] serialBuffer = new byte[this.serialPort.ReadBufferSize];
+            byte[] pipeBuffer = new byte[this.serialPort.ReadBufferSize];
 
-        private static void NamedPipeRunner(object connection)
-        {
-            var thisConnection = (Connection)connection;
-            if (thisConnection == null) throw new ArgumentException("connection must be of Type Connection!");
-            while (true)
-            {
-                if (thisConnection.NamedPipeBufferLength > 0)
-                {
-                    lock (thisConnection.NamedPipeBufferLock)
-                    {
-                        thisConnection.NamedPipe.Write(thisConnection.NamedPipeBuffer, 0,
-                                                       thisConnection.NamedPipeBufferLength);
-                        Logger.Debug("Wrote (NP):" +
-                                     GetLogString(thisConnection.NamedPipeBuffer, thisConnection.NamedPipeBufferLength));
-                        thisConnection.NamedPipeBufferLength = 0;
-                    }
-                }
-                Thread.Sleep(5);
-            }
-        }
+            IAsyncResult pipeReadResult = null;
+            IAsyncResult serialReadResult = null;
 
-        private static void SerialPortRunner(object connection)
-        {
-            var thisConnection = (Connection) connection;
-            if (thisConnection == null) throw new ArgumentException("connection must be of Type Connection!");
-            var buffer = new byte[65536];
-            var numbytes = 0;
-            
-            while (true)
-            {
+            this.serialPort.Open();
+            this.namedPipe.Connect();
+            this.namedPipe.ReadMode = PipeTransmissionMode.Byte;
 
-                if (thisConnection.SerialPort.BytesToRead > 0)
+            ManualResetEvent pipeEvent = new ManualResetEvent(true);
+            ManualResetEvent serialEvent = new ManualResetEvent(true);
+
+            int waitResult;
+
+            do
+            {
+                if (pipeEvent.WaitOne(0))
                 {
-                    lock (thisConnection.NamedPipeBufferLock)
-                    {
-                        while (thisConnection.SerialPort.BytesToRead != 0)
+                    pipeEvent.Reset();
+
+                    pipeReadResult = this.namedPipe.BeginRead(
+                        pipeBuffer,
+                        0,
+                        pipeBuffer.Length,
+                        delegate(IAsyncResult namedPipeAsyncResult)
                         {
-                            buffer[numbytes] = (byte) thisConnection.SerialPort.ReadByte();
-                            numbytes++;
-                        }
-                        
-                        if (numbytes > 0)
-                        {
-                            Buffer.BlockCopy(buffer, 0, thisConnection.NamedPipeBuffer, thisConnection.NamedPipeBufferLength, numbytes);
-                            thisConnection.NamedPipeBufferLength += numbytes;
-                            Logger.Debug("Read (CP): " +
-                                        GetLogString(thisConnection.NamedPipeBuffer, thisConnection.NamedPipeBufferLength));
-                            numbytes = 0;
-                        }
-                    }
+                            try
+                            {
+                                int actualLength = this.namedPipe.EndRead(namedPipeAsyncResult);
+
+                                Logger.Debug("Read (NP): " + GetLogString(pipeBuffer, actualLength));
+
+                                this.serialPort.BaseStream.BeginWrite(
+                                    pipeBuffer,
+                                    0,
+                                    actualLength,
+                                    delegate(IAsyncResult serialPortAsyncResult)
+                                    {
+                                        this.serialPort.BaseStream.EndWrite(serialPortAsyncResult);
+
+                                        Logger.Debug("Wrote (CP): " + GetLogString(pipeBuffer, actualLength));
+                                    },
+                                    null);
+                            }
+                            catch (IOException)
+                            {
+                            }
+                            catch (ObjectDisposedException)
+                            {
+                                // Aborted due to close
+                            }
+                            catch (InvalidOperationException)
+                            {
+                                // Aborted due to close
+                            } 
+
+                            pipeEvent.Set();
+                        },
+                        null);
                 }
 
-                if (thisConnection.SerialPortBufferLength > 0)
+                if (serialEvent.WaitOne(0))
                 {
-                    lock (thisConnection.SerialPortBufferLock)
-                    {
-                        thisConnection.SerialPort.BaseStream.Write(thisConnection.SerialPortBuffer, 0, thisConnection.SerialPortBufferLength);
-                        Logger.Debug("Wrote (CP): " +
-                                            GetLogString(thisConnection.SerialPortBuffer, thisConnection.SerialPortBufferLength));
-                        thisConnection.SerialPortBufferLength = 0;
-                    }
+                    serialEvent.Reset();
+
+                    serialReadResult = this.serialPort.BaseStream.BeginRead(
+                        serialBuffer,
+                        0,
+                        serialBuffer.Length,
+                        delegate(IAsyncResult serialPortAsyncResult)
+                        {
+                            try
+                            {
+                                int actualLength = this.serialPort.BaseStream.EndRead(serialPortAsyncResult);
+
+                                Logger.Debug("Read (CP): " + GetLogString(serialBuffer, actualLength));
+
+                                this.namedPipe.BeginWrite(
+                                    serialBuffer,
+                                    0,
+                                    actualLength,
+                                    delegate(IAsyncResult namedPipeAsyncResult)
+                                    {
+                                        this.namedPipe.EndWrite(namedPipeAsyncResult);
+
+                                        Logger.Debug("Wrote (NP): " + GetLogString(serialBuffer, actualLength));
+                                    },
+                                    null);
+                            }
+                            catch (IOException)
+                            {
+                            }
+                            catch (ObjectDisposedException)
+                            {
+                                // Aborted due to close
+                            }
+                            catch (InvalidOperationException)
+                            {
+                                // Aborted due to close
+                            } 
+
+                            serialEvent.Set();
+                        },
+                        null);
                 }
-                
-                Thread.Sleep(5);
+
+                waitResult = 
+                    WaitHandle.WaitAny(
+                        new WaitHandle[]
+                        {
+                            serialEvent,
+                            pipeEvent,
+                            stopEvent
+                        });
+
             }
+            while (waitResult != 2);
+
+            this.serialPort.Close();
+            this.namedPipe.Close();
         }
 
         #endregion
@@ -166,31 +216,7 @@ namespace NP2COM
 
         public bool IsStarted { get; private set; }
 
-        protected byte[] SerialPortBuffer { get; set; }
-
-        protected object SerialPortBufferLock { get; set; }
-
-        protected int SerialPortBufferLength { get; set; }
-
-        protected int NamedPipeBufferLength { get; set; }
-
-        protected byte[] NamedPipeBuffer { get; set; }
-
-        protected SerialPort SerialPort { get; set; }
-
-        protected Thread SerialPortThread { get; set; }
-
-        protected Thread NamedPipeThread { get; set; }
-
-        protected Thread NamedPipeCopyThread { get; set; }
-
-        protected object NamedPipeBufferLock { get; set; }
-
-        protected NamedPipeClientStream NamedPipe { get; set; }
-
         protected Settings CurrentSettings { get; private set; }
-
-        protected BufferedStream NamedPipeBufferstream { get; set; }
 
         #endregion
     }
