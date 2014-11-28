@@ -11,8 +11,6 @@ namespace NP2COMS
         /// 
         public static int Main(string[] args)
         {
-            NP2COMService service = new NP2COMService();
-
             ServiceBase.Run(new NP2COMService());
 
             return 0;
