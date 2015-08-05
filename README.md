@@ -43,11 +43,11 @@ Enjoy,
 
 Having problems start here: https://github.com/albertjan/PipeToCom/issues/10
 
-Installing: (by @vibac)
-
 =========================
 How to Install NP2COM
 =========================
+Installing: (by [@vibac](http://github.com/vibac)
+
 Give your user full rights on the NP2COM folder after extracting it:
 
 - Right click the NP2COM folder>properties and give your user full rights
